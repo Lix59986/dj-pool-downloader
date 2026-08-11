@@ -1,0 +1,61 @@
+{
+  "id": "68c4d40b-80c1-4728-bd8c-d651258226bf",
+  "title": "Do You Think About Me (Rob Rivera Transition 126-94 Extended)",
+  "artist": "50 Cent, Governor",
+  "bpm": 94,
+  "key": "4A",
+  "language": "ENG",
+  "genre": {
+    "id": 2,
+    "favorite": false,
+    "seo_title": "",
+    "seo_keywords": "",
+    "seo_description": "",
+    "name": "Hip-Hop",
+    "slug": "hip-hop",
+    "thumbnail": "https://muzvizor.com/media/playlists_pics/Hip_hop.png",
+    "description": "От классики до свежих релизов — грув, кач и биты, которые двигают танцпол. Заходит в клубах, барах и на любых вечеринках.",
+    "is_private": false,
+    "do_not_cut": false,
+    "type_of_dj": [
+      3
+    ]
+  },
+  "genres": [
+    {
+      "id": 2,
+      "favorite": false,
+      "seo_title": "",
+      "seo_keywords": "",
+      "seo_description": "",
+      "name": "Hip-Hop",
+      "slug": "hip-hop",
+      "thumbnail": "https://muzvizor.com/media/playlists_pics/Hip_hop.png",
+      "description": "От классики до свежих релизов — грув, кач и биты, которые двигают танцпол. Заходит в клубах, барах и на любых вечеринках.",
+      "is_private": false,
+      "do_not_cut": false,
+      "type_of_dj": [
+        3
+      ]
+    }
+  ],
+  "stage": "warmup",
+  "date_published": "2026-04-28T12:03:20.668215+03:00",
+  "favorite": false,
+  "audios": [
+    {
+      "version": {
+        "id": 2,
+        "name": "Main",
+        "slug": "Main"
+      },
+      "length": 231.267425,
+      "download": false,
+      "length_real": 90
+    }
+  ],
+  "is_already_listened": false,
+  "hit_year": null,
+  "in_top": false,
+  "is_inoagent": false
+}

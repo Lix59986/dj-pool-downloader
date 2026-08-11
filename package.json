@@ -1,0 +1,15 @@
+{
+  "name": "dj-pool-downloader",
+  "version": "0.0.1",
+  "private": true,
+  "description": "DJ Pool Downloader — расширение для Chrome/Edge (MV3) + бэкенд (Vercel + Supabase) + PWA. Сейчас — этап 1: бэкенд (готов код API, нужен деплой).",
+  "scripts": {
+    "probe": "tsx scripts/probe-pools.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

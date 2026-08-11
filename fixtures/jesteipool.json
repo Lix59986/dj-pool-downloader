@@ -1,0 +1,123 @@
+{
+  "id": "328149",
+  "name": "Candy Shop (Lilian Bilotta Remix)",
+  "date_active_from": "16.07.2026",
+  "date_active_from_full": "16.07.2026 16:09:16",
+  "source": "https://rest.jesteipool.ru/api/tracks/play?track_id=328149&file_id=507328&user_id=0",
+  "soundwave": [],
+  "artist": "50 Cent, Olivia",
+  "rating": 1,
+  "editor_name": "",
+  "type": "Extended",
+  "variant": "Remix",
+  "label": {
+    "name": "Jestei Pool",
+    "icon": "/upload/uf/aa7/uxzeibqx88kababi189jdgxcu22m7rqd.svg",
+    "link": "https://instagram.com/jesteipool/"
+  },
+  "key": "5B",
+  "key_index": "100",
+  "bpm": 130,
+  "downloads_all": 40,
+  "was_in_top": false,
+  "liked": false,
+  "played": false,
+  "set_format": "tantsevalnyy-set",
+  "part_night": [
+    "Primetime",
+    "Closing"
+  ],
+  "category": false,
+  "marking": [],
+  "event_marking": [],
+  "genres": [
+    {
+      "title": "Pop",
+      "code": "pop2",
+      "sort": 7
+    },
+    {
+      "title": "House",
+      "code": "house",
+      "sort": 17
+    }
+  ],
+  "artist_info": [
+    {
+      "id": "48001",
+      "code": "50-cent",
+      "name": "50 Cent",
+      "picture": "https://jesteipool.storage.yandexcloud.net/iblock/5ad/ytkeyzkpy1qn0w3ur5z795i9snxzjd84.png",
+      "count": {
+        "subscriber": "1103"
+      },
+      "vertical_photo": "",
+      "section_id": "190",
+      "tags_include": [
+        "50 Cent"
+      ],
+      "tags_exclude": null
+    }
+  ],
+  "download_with_archive": false,
+  "downloads": {
+    "available": false,
+    "progress": "0%",
+    "items": [
+      {
+        "name": "Extended",
+        "source": null,
+        "available": false,
+        "download_count": 0,
+        "extension": "mp3"
+      },
+      {
+        "name": "Extended",
+        "source": null,
+        "available": false,
+        "download_count": 0,
+        "extension": "wav"
+      }
+    ]
+  },
+  "access": {
+    "download": {
+      "guest": false,
+      "free": false,
+      "record-pool": true,
+      "pro": true,
+      "event": true
+    },
+    "play": {
+      "guest": 90,
+      "free": 90,
+      "record-pool": true,
+      "pro": true,
+      "event": true
+    }
+  },
+  "in_playlists": [
+    {
+      "id": "258",
+      "code": "tancevalnye-remiksy-dlya-didzheev",
+      "parent_code": "pop-dance",
+      "name": "Танцевальные ремиксы",
+      "picture": "https://jesteipool.storage.yandexcloud.net/iblock/d15/d15d062ae25a4d0089e55141c72d731f/15923b087ecca7aa47cddae39be31990.png",
+      "type": "playlist"
+    },
+    {
+      "id": "48001",
+      "code": "50-cent",
+      "parent_code": "",
+      "name": "50 Cent",
+      "picture": "https://jesteipool.storage.yandexcloud.net/iblock/5ad/ytkeyzkpy1qn0w3ur5z795i9snxzjd84.png",
+      "type": "artist"
+    }
+  ],
+  "available_percent": 49.74489619668118,
+  "duration": 180.92308333333,
+  "preview_start": 0,
+  "preview_length": 90,
+  "has_detail_page": true,
+  "is_adult": false
+}

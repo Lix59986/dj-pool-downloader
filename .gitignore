@@ -1,0 +1,26 @@
+# Node
+node_modules/
+*.tsbuildinfo
+
+# Next.js build
+.next/
+out/
+build/
+
+# Env (кроме шаблонов)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Локальная разработка
+.vercel
+dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Логи
+npm-debug.log*
+yarn-error.log*

@@ -1,0 +1,37 @@
+{
+  "title": "I Get It In",
+  "year": null,
+  "cover_url": "https://s3.twcstorage.ru/1855b904-58a20659-db9d-4733-8e5a-57a7493e7b33/default/image.jpg",
+  "duration_seconds": 192,
+  "genre": "Hip-Hop",
+  "bpm": 95,
+  "key": "C#m",
+  "night_time": "Pre-Party",
+  "category": "Original",
+  "weekly_rating": 0,
+  "weekly_downloads_count": 0,
+  "id": "12032c64-1bf0-469f-abe2-522a47312df2",
+  "artist_id": "2816f8c4-614f-460f-9a87-cefccb751757",
+  "s3_key": "raw-uploads/24/50 Cent - I Get It In.mp3",
+  "owner_id": 24,
+  "created_at": "2026-03-05T19:10:50.547542",
+  "owner": {
+    "id": 24,
+    "username": "ярослав",
+    "role": "editor"
+  },
+  "artist": {
+    "name": "50 Cent",
+    "image_url": null,
+    "id": "2816f8c4-614f-460f-9a87-cefccb751757",
+    "slug": "50-cent",
+    "created_at": "2026-02-16T13:52:08.134138"
+  },
+  "likes_count": 0,
+  "downloads_count": 0,
+  "is_liked": false,
+  "moderation_status": "approved",
+  "moderated_at": "2026-03-05T23:26:26.220697Z",
+  "moderation_notes": null,
+  "monthly_score": null
+}
