@@ -105,6 +105,11 @@ export class DB {
     if (found) await tx(db, "tracks", "readwrite", (s) => s.put({ ...found, ...patch }));
   }
 
+  static async deleteTrack(id: string): Promise<void> {
+    const db = await DB.get();
+    await tx(db, "tracks", "readwrite", (s) => s.delete(id));
+  }
+
   static async allTracks(): Promise<Track[]> {
     const db = await DB.get();
     return getAll<Track>(db, "tracks");

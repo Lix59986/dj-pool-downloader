@@ -5,20 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DJ Pool Downloader</title>
     <style>
-      body { font-family: system-ui, sans-serif; width: 360px; margin: 0; padding: 12px; font-size: 13px; color: #1f2328; }
-      h1 { font-size: 15px; margin: 0 0 8px; }
-      .row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #eee; }
-      .count { font-weight: 600; }
-      .muted { color: #666; }
-      button { margin-top: 8px; padding: 6px 10px; border: 1px solid #ccc; border-radius: 6px; background: #fff; cursor: pointer; }
-      button:hover { background: #f6f8fa; }
+      :root { --fg: #1f2328; --muted: #656d76; --accent: #1f6feb; --border: #d0d7de; --bg: #ffffff; --bg2: #f6f8fa; }
+      * { box-sizing: border-box; }
+      body { font-family: system-ui, -apple-system, sans-serif; width: 380px; margin: 0; font-size: 13px; color: var(--fg); background: var(--bg); }
+      header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+      header h1 { font-size: 14px; margin: 0; flex: 1; }
+      .badge { background: var(--bg2); border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; font-size: 11px; color: var(--muted); }
+      .tabs { display: flex; border-bottom: 1px solid var(--border); }
+      .tabs button { flex: 1; padding: 8px 4px; border: none; background: none; cursor: pointer; font-size: 12px; color: var(--muted); border-bottom: 2px solid transparent; }
+      .tabs button.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+      .content { padding: 10px 12px; max-height: 440px; overflow-y: auto; }
+      .btn { padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); cursor: pointer; font-size: 12px; }
+      .btn:hover { background: var(--bg2); }
+      .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+      .btn.primary:hover { opacity: 0.9; }
+      .btn:disabled { opacity: 0.5; cursor: default; }
+      .row { display: flex; align-items: center; gap: 6px; padding: 8px 0; border-bottom: 1px solid #eef0f3; }
+      .row:last-child { border-bottom: none; }
+      .row .meta { flex: 1; min-width: 0; }
+      .row .title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .row .sub { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .tag { display: inline-block; background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; font-size: 10px; color: var(--muted); margin-right: 3px; }
+      .muted { color: var(--muted); }
+      .empty { color: var(--muted); text-align: center; padding: 24px 0; }
+      form { display: flex; flex-direction: column; gap: 6px; }
+      label { font-size: 11px; color: var(--muted); }
+      input, select { padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; width: 100%; }
+      .form-row { display: flex; gap: 6px; }
+      .form-row > * { flex: 1; }
+      .err { color: #cf222e; font-size: 11px; }
+      .ok { color: #1a7f37; font-size: 11px; }
+      .section { margin: 8px 0; }
+      .section h3 { font-size: 11px; text-transform: uppercase; color: var(--muted); margin: 10px 0 4px; }
+      .edit { border: 1px solid var(--border); border-radius: 8px; padding: 8px; margin: 6px 0; background: var(--bg2); }
+      .hint { font-size: 11px; color: var(--muted); }
+      .inline-actions { display: flex; gap: 4px; }
+      .icon-btn { border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 2px 6px; cursor: pointer; font-size: 12px; }
+      .icon-btn:hover { background: var(--bg2); }
+      .star { color: #d4a72c; }
+      .ok-msg { background: #dafbe1; border: 1px solid #2da44e; border-radius: 6px; padding: 6px 8px; font-size: 12px; margin: 6px 0; }
+      .err-msg { background: #ffebe9; border: 1px solid #ff8182; border-radius: 6px; padding: 6px 8px; font-size: 12px; margin: 6px 0; }
     </style>
   </head>
   <body>
-    <h1>DJ Pool Downloader</h1>
-    <div class="row"><span>Треков в базе</span><span class="count" id="count">…</span></div>
-    <div class="row"><span>Статус</span><span id="status">загрузка…</span></div>
-    <button id="refresh">Обновить</button>
-    <script type="module" src="./index.ts"></script>
+    <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
   </body>
 </html>
