@@ -233,6 +233,9 @@ function TrackEditor({ track, onClose, reload, notify }: { track: Track; onClose
 /* ---------- Вкладка «Избранное» ---------- */
 
 function FavoritesTab({ favorites, settings, reload, notify }: { favorites: Favorite[]; settings: Settings; reload: () => void; notify: (t: "ok" | "err", s: string) => void }) {
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState(false);
+
   const remove = async (fav: Favorite) => {
     await DB.removeFavorite(fav.id);
     if (fav.synced && settings.token) {
@@ -244,11 +247,56 @@ function FavoritesTab({ favorites, settings, reload, notify }: { favorites: Favo
     notify("ok", "Удалено из избранного");
   };
 
+  const toggle = (id: string) => {
+    setSelected((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const downloadFav = async (fav: Favorite) => {
+    const url = fav.url ?? (fav.track_id_on_pool ? undefined : undefined);
+    if (!url) return false;
+    await chrome.downloads.download({ url, conflictAction: "uniquify" });
+    await DB.addFavorite({ ...fav, status: "done" });
+    return true;
+  };
+
+  const downloadMany = async (list: Favorite[]) => {
+    setBusy(true);
+    let ok = 0;
+    try {
+      for (const f of list) if (await downloadFav(f)) ok++;
+      await reload();
+      notify("ok", `Скачивание запущено: ${ok}/${list.length}`);
+    } catch (e) {
+      notify("err", e instanceof Error ? e.message : "Ошибка скачивания");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (favorites.length === 0) return <div className="empty">Избранного пока нет</div>;
   return (
     <div>
+      <div className="form-row" style={{ marginBottom: 6 }}>
+        <button className="btn" disabled={busy} onClick={() => void downloadMany(favorites.filter((f) => selected.has(f.id)))}>
+          Скачать выбранные ({selected.size})
+        </button>
+        <button className="btn" disabled={busy} onClick={() => void downloadMany(favorites)}>
+          Скачать все
+        </button>
+      </div>
       {favorites.map((f) => (
         <div className="row" key={f.id}>
+          <input
+            type="checkbox"
+            checked={selected.has(f.id)}
+            onChange={() => toggle(f.id)}
+            style={{ width: "auto" }}
+          />
           <div className="meta">
             <div className="title">{f.artist ? `${f.artist} — ` : ""}{f.title}</div>
             <div className="sub">
@@ -256,6 +304,7 @@ function FavoritesTab({ favorites, settings, reload, notify }: { favorites: Favo
               {f.meta?.bpm ? <span className="tag">{f.meta.bpm} BPM</span> : null}
               {f.meta?.key ? <span className="tag">{f.meta.key}</span> : null}
               {f.meta?.rating ? <span className="tag star">★{f.meta.rating}</span> : null}
+              {f.status !== "new" && <span className="tag">{f.status}</span>}
             </div>
           </div>
           <button className="icon-btn" title="Удалить" onClick={() => void remove(f)}>✕</button>

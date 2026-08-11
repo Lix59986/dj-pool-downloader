@@ -110,6 +110,7 @@ async function pullTracks(settings: Settings, token: string): Promise<number> {
       preview: r.preview,
       comment: r.comment,
       file_path: r.local_path,
+      file_ext: r.local_path?.split(".").pop()?.toLowerCase() ?? null,
       file_size: null,
       duration_sec: null,
       bitrate: null,

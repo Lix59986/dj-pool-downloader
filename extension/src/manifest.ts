@@ -25,6 +25,26 @@ export default defineManifest({
     service_worker: "src/background/index.ts",
     type: "module",
   },
+  content_scripts: [
+    {
+      matches: [
+        "*://jesteipool.ru/*",
+        "*://rest.jesteipool.ru/*",
+        "*://muzvizor.com/*",
+        "*://36pool.com/*",
+        "*://bpmsupreme.com/*",
+        "*://djcity.com/*",
+        "*://zipdj.com/*",
+        "*://digitaldjpool.com/*",
+        "*://promoonly.com/*",
+        "*://mymp3pool.com/*",
+        "*://beatsource.com/*",
+        "*://djpoolrecords.com/*",
+      ],
+      js: ["src/content/pools.ts"],
+      run_at: "document_idle",
+    },
+  ],
   action: {
     default_popup: "src/popup/index.html",
     default_title: "DJ Pool Downloader",

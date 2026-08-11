@@ -41,7 +41,7 @@ function resolveTemplate(
 export function buildFilePath(track: Track, settings: Settings): string {
   const artist = track.artist && track.artist.trim() ? track.artist.trim() : "Неизвестный";
   const title = track.title.trim();
-  const ext = track.url?.split(".").pop()?.toLowerCase() || "mp3";
+  const ext = track.file_ext || track.url?.split(".").pop()?.toLowerCase() || "mp3";
   const safeArtist = sanitizeName(artist);
   const safeTitle = sanitizeName(title);
 
@@ -84,7 +84,8 @@ const DEFAULT_TEMPLATE = "muzz/{Жанр}/{Часть ночи}/{Артист} -
 /** Превью всегда в muzz/_preview/. */
 export function previewFilePath(track: Track): string {
   const artist = track.artist && track.artist.trim() ? track.artist.trim() : "Неизвестный";
-  const safe = `${sanitizeName(artist)} - ${sanitizeName(track.title)}.mp3`;
+  const ext = track.file_ext || "mp3";
+  const safe = `${sanitizeName(artist)} - ${sanitizeName(track.title)}.${ext}`;
   return `muzz/_preview/${safe}`;
 }
 

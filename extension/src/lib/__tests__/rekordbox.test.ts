@@ -25,6 +25,7 @@ function track(id: string, overrides: Partial<Track> = {}): Track {
     bitrate: 320,
     sample_rate: 44100,
     url: "https://x/a.mp3",
+    file_ext: "mp3",
     downloaded_at: "2026-08-11",
     updated_at: "2026-08-11",
     synced: true,

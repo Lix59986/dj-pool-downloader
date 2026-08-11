@@ -67,4 +67,9 @@ describe("looksLikePreview", () => {
     expect(looksLikePreview(8_000_000)).toBe(false);
     expect(looksLikePreview(undefined)).toBe(false);
   });
+  it("для FLAC/WAV порог выше", () => {
+    expect(looksLikePreview(8_000_000, "flac")).toBe(true);
+    expect(looksLikePreview(15_000_000, "wav")).toBe(false);
+    expect(looksLikePreview(8_000_000, "mp3")).toBe(false);
+  });
 });

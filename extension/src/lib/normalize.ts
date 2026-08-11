@@ -54,8 +54,12 @@ export function uniqueName(base: string, ext: string, existing: Set<string>): st
 }
 
 /** Проверка: похоже на превью по размеру файла (байты). */
-export function looksLikePreview(fileSizeBytes: number | undefined): boolean {
+export function looksLikePreview(fileSizeBytes: number | undefined, ext?: string | null): boolean {
   if (fileSizeBytes === undefined) return false;
-  // 90 сек MP3 320kbps ≈ 3.6 MB; превью обычно < 2.5 MB
-  return fileSizeBytes < 2_500_000;
+  // 90 сек MP3 320kbps ≈ 3.6 MB; превью обычно < 2.5 MB.
+  // FLAC/WAV занимают больше, порог поднимаем.
+  const e = (ext ?? "").toLowerCase();
+  const bigExt = e === "wav" || e === "flac" || e === "aiff" || e === "aif";
+  const threshold = bigExt ? 12_000_000 : 2_500_000;
+  return fileSizeBytes < threshold;
 }

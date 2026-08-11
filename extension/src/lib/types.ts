@@ -31,6 +31,7 @@ export interface Track {
   bitrate: number | null;
   sample_rate: number | null;
   url: string | null;
+  file_ext: string | null; // mp3/wav/flac/m4a/aac/ogg из реального имени файла
   downloaded_at: string | null;
   updated_at: string;
   synced: boolean;
