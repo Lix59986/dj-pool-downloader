@@ -1,0 +1,37 @@
+import { defineManifest } from "@crxjs/vite-plugin";
+
+export default defineManifest({
+  manifest_version: 3,
+  name: "DJ Pool Downloader",
+  description: "Скачивание и классификация музыки с пулов (jesteipool, muzvizor, 36pool) в папку muzz + экспорт Rekordbox XML",
+  version: "0.1.0",
+  permissions: ["downloads", "storage", "tabs", "notifications", "alarms"],
+  host_permissions: [
+    "*://jesteipool.ru/*",
+    "*://rest.jesteipool.ru/*",
+    "*://muzvizor.com/*",
+    "*://36pool.com/*",
+    "*://bpmsupreme.com/*",
+    "*://djcity.com/*",
+    "*://zipdj.com/*",
+    "*://digitaldjpool.com/*",
+    "*://promoonly.com/*",
+    "*://mymp3pool.com/*",
+    "*://beatsource.com/*",
+    "*://djpoolrecords.com/*",
+    "*://www.shazam.com/*",
+  ],
+  background: {
+    service_worker: "src/background/index.ts",
+    type: "module",
+  },
+  action: {
+    default_popup: "src/popup/index.html",
+    default_title: "DJ Pool Downloader",
+  },
+  icons: {
+    16: "icons/icon16.png",
+    48: "icons/icon48.png",
+    128: "icons/icon128.png",
+  },
+});

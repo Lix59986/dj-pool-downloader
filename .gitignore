@@ -24,3 +24,5 @@ Thumbs.db
 # Логи
 npm-debug.log*
 yarn-error.log*
+
+extension/dist/
