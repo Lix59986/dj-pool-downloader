@@ -23,12 +23,20 @@
   "liked": false,
   "played": false,
   "set_format": "tantsevalnyy-set",
-  "part_night": [
-    "Primetime",
-    "Closing"
-  ],
+  "part_night": "Primetime Closing",
   "category": false,
-  "marking": [],
+  "marking": [
+    {
+      "title": "Рэтоп",
+      "code": "russian",
+      "icon": { "literal": "🇷🇺", "color": "#E3FF44" }
+    },
+    {
+      "title": "Танцевальный",
+      "code": "transition",
+      "icon": { "literal": "🕺", "color": "#5D44FF" }
+    }
+  ],
   "event_marking": [],
   "genres": [
     {

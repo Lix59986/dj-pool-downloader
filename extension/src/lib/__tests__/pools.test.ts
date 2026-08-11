@@ -17,17 +17,38 @@ describe("jesteipool connector", () => {
     expect(t.genres).toContain("Хаус");
     expect(t.parts).toContain("Primetime");
     expect(t.parts).toContain("Closing");
+    expect(t.marks).toContain("Рэтоп");
+    expect(t.marks).toContain("Танцевальный");
     expect(t.rating).toBe(1);
     expect(t.pool_type).toBe("Remix");
     expect(t.duration_sec).toBe(181);
   });
-  it("favorite содержит метаданные", () => {
+  it("части ночи из строки с несколькими метками разделяются", () => {
+    const [t] = connector.parseResponse([jesteipoolFixture]);
+    expect(t.parts).toEqual(["Primetime", "Closing"]);
+  });
+  it("маркировки: объект или массив объектов {title} → массив названий", () => {
+    const [t] = connector.parseResponse([jesteipoolFixture]);
+    const track = connector.toTrack(t);
+    expect(track.marks).toEqual(["Рэтоп", "Танцевальный"]);
+    expect(track.parts).toEqual(["Primetime", "Close"]);
+  });
+  it("favorite содержит метаданные и комментарий", () => {
     const [t] = connector.parseResponse([jesteipoolFixture]);
     const fav = connector.toFavorite(t);
     expect(fav.pool).toBe("jesteipool");
     expect(fav.track_id_on_pool).toBe("328149");
     expect(fav.meta?.parts).toEqual(["Primetime", "Close"]);
     expect(fav.meta?.key).toBe("5B");
+    expect(fav.meta?.marks).toEqual(["Рэтоп", "Танцевальный"]);
+    expect(fav.meta?.comment).toContain("JP часть ночи");
+    expect(fav.meta?.comment).toContain("Маркировки: Рэтоп, Танцевальный");
+  });
+  it("toTrack заполняет comment в БД", () => {
+    const [t] = connector.parseResponse([jesteipoolFixture]);
+    const track = connector.toTrack(t);
+    expect(track.comment).toContain("JP жанры: Поп, Хаус");
+    expect(track.comment).toContain("Тип: Remix");
   });
 });
 

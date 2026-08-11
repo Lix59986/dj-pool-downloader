@@ -1,5 +1,13 @@
 /** Нормализация названий/артистов и утилиты имён. */
 
+/** Расширения аудио, которые мы перехватываем. */
+export const AUDIO_EXTS = ["mp3", "wav", "flac", "m4a", "aac", "ogg", "opus", "aiff", "aif", "alac", "m4b"];
+
+/** Похоже ли URL/имя файла на аудио. */
+export function isAudioUrl(url: string): boolean {
+  return new RegExp(`\\.(${AUDIO_EXTS.join("|")})([?#].*)?$`, "i").test(url) || url.includes("audio");
+}
+
 /** Запрещённые в именах файлов символы → "_". */
 export function sanitizeName(s: string): string {
   return s.replace(/[\\/:*?"<>|]/g, "_").replace(/\s+/g, " ").trim();

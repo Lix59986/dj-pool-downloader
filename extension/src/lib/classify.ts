@@ -51,7 +51,6 @@ export function mapPart(label: string | null | undefined): Part | null {
     case "close":
       return "Close";
     case "background":
-    case "background":
       return "Open";
     default:
       return null;
@@ -112,4 +111,32 @@ export function keyToCamelot(key: string | null | undefined): string | null {
   const camelot = k.match(/^(\d{1,2})([AB])$/i);
   if (camelot) return `${camelot[1]}${camelot[2].toUpperCase()}`;
   return PITCH_TO_CAMELOT[k] ?? null;
+}
+
+/** Pool-префикс для комментария. */
+const POOL_PREFIXES: Record<string, string> = {
+  jesteipool: "JP",
+  muzvizor: "MV",
+  "36pool": "36",
+};
+
+export function poolPrefix(pool: string): string {
+  return POOL_PREFIXES[pool] ?? pool.toUpperCase().slice(0, 4);
+}
+
+interface Commentable {
+  parts: Part[];
+  genres: string[];
+  marks: string[];
+  pool_type: string | null;
+}
+
+/** Комментарий из классификации: "JP часть ночи: ... | JP жанры: ... | Маркировки: ... | Тип: ...". */
+export function buildComment(t: Commentable, prefix: string): string {
+  const parts: string[] = [];
+  if (t.parts.length) parts.push(`${prefix} часть ночи: ${t.parts.join(", ")}`);
+  if (t.genres.length) parts.push(`${prefix} жанры: ${t.genres.join(", ")}`);
+  if (t.marks.length) parts.push(`Маркировки: ${t.marks.join(", ")}`);
+  if (t.pool_type) parts.push(`Тип: ${t.pool_type}`);
+  return parts.join(" | ");
 }

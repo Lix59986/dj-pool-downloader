@@ -65,7 +65,7 @@ function App() {
     setBusy(true);
     try {
       const xml = generateRekordboxXml(tracks.tracks, settings.downloadFolder || "C:/Users/Загрузки");
-      await chromeDownload("rekordbox - muzz.xml", xml, "text/xml");
+      await chromeDownload("muzz/rekordbox - muzz.xml", xml, "text/xml");
       notify("ok", "Rekordbox XML скачан");
     } catch (e) {
       notify("err", e instanceof Error ? e.message : "Ошибка экспорта");
@@ -80,7 +80,7 @@ function App() {
     try {
       const files = generateM3U8(tracks.tracks, settings.downloadFolder || "C:/Users/Загрузки");
       for (const [name, content] of files) {
-        await chromeDownload(name, content, "audio/x-mpegurl");
+        await chromeDownload(`muzz/${name}`, content, "audio/x-mpegurl");
       }
       notify("ok", `M3U8 скачан (${files.size} плейлистов)`);
     } catch (e) {
@@ -173,14 +173,15 @@ function TrackRow({ track, onEdit, onDelete }: { track: Track; onEdit: () => voi
           {track.preview && <span className="tag">превью</span>}
         </div>
         <div className="sub">
-          {track.parts.map((p) => <span key={p} className="tag">{p}</span>)}
+          {(track.parts ?? []).map((p) => <span key={p} className="tag">{p}</span>)}
           <span className="tag">{track.lang}</span>
           {track.rating ? <span className="tag star">★{track.rating}</span> : null}
-          {track.genres.map((g) => <span key={g} className="tag">{g}</span>)}
-          {track.marks.map((m) => <span key={m} className="tag">{m}</span>)}
+          {(track.genres ?? []).map((g) => <span key={g} className="tag">{g}</span>)}
+          {(track.marks ?? []).map((m) => <span key={m} className="tag">{m}</span>)}
           {track.bpm ? <span className="tag">{track.bpm} BPM</span> : null}
           {track.key ? <span className="tag">{track.key}</span> : null}
         </div>
+        {track.comment && <div className="comment">{track.comment}</div>}
       </div>
       <div className="inline-actions">
         <button className="icon-btn" title="Изменить" onClick={onEdit}>✎</button>
@@ -194,13 +195,25 @@ function TrackEditor({ track, onClose, reload, notify }: { track: Track; onClose
   const [title, setTitle] = useState(track.title);
   const [artist, setArtist] = useState(track.artist ?? "");
   const [parts, setParts] = useState<Part[]>(track.parts);
+  const [genres, setGenres] = useState<string>(track.genres.join(", "));
+  const [marks, setMarks] = useState<string>(track.marks.join(", "));
+  const [comment, setComment] = useState(track.comment ?? "");
   const [rating, setRating] = useState(track.rating ?? 0);
 
   const togglePart = (p: Part) => setParts((cur) => (cur.includes(p) ? cur.filter((x) => x !== p) : [...cur, p]));
+  const splitList = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean);
 
   const save = async () => {
     if (!title.trim()) { notify("err", "Название не может быть пустым"); return; }
-    await DB.updateTrack(track.id, { title: title.trim(), artist: artist.trim() || null, parts, rating: rating || null });
+    await DB.updateTrack(track.id, {
+      title: title.trim(),
+      artist: artist.trim() || null,
+      parts,
+      genres: splitList(genres),
+      marks: splitList(marks),
+      comment: comment.trim() || null,
+      rating: rating || null,
+    });
     onClose();
     await reload();
     notify("ok", "Трек обновлён");
@@ -213,12 +226,18 @@ function TrackEditor({ track, onClose, reload, notify }: { track: Track; onClose
         <input value={artist} onChange={(e) => setArtist(e.target.value)} />
         <label>Название</label>
         <input value={title} onChange={(e) => setTitle(e.target.value)} />
-        <label>Часть ночи</label>
+        <label>Часть ночи (несколько — трек в каждой)</label>
         <div className="form-row">
           {(["Open", "Primetime", "Close"] as Part[]).map((p) => (
             <button key={p} type="button" className={`btn ${parts.includes(p) ? "primary" : ""}`} onClick={() => togglePart(p)}>{p}</button>
           ))}
         </div>
+        <label>Жанры (через запятую)</label>
+        <input value={genres} onChange={(e) => setGenres(e.target.value)} />
+        <label>Маркировки (через запятую)</label>
+        <input value={marks} onChange={(e) => setMarks(e.target.value)} />
+        <label>Комментарий</label>
+        <textarea value={comment} onChange={(e) => setComment(e.target.value)} />
         <label>Рейтинг (1–5)</label>
         <input type="number" min={0} max={5} value={rating} onChange={(e) => setRating(Number(e.target.value))} />
         <div className="form-row">
@@ -257,9 +276,24 @@ function FavoritesTab({ favorites, settings, reload, notify }: { favorites: Favo
   };
 
   const downloadFav = async (fav: Favorite) => {
-    const url = fav.url ?? (fav.track_id_on_pool ? undefined : undefined);
-    if (!url) return false;
-    await chrome.downloads.download({ url, conflictAction: "uniquify" });
+    // Обогащаем метаданные и скачиваем через background (прямой аудио-URL или fallback)
+    const resp = (await chrome.runtime.sendMessage({
+      type: "FAVORITE_DOWNLOAD",
+      payload: {
+        pool: fav.pool,
+        track_id_on_pool: fav.track_id_on_pool,
+        title: fav.title,
+        artist: fav.artist,
+        bpm: fav.meta?.bpm,
+        key: fav.meta?.key,
+        genres: fav.meta?.genres,
+        parts: fav.meta?.parts,
+        rating: fav.meta?.rating,
+        marks: fav.meta?.marks,
+        url: fav.url,
+      },
+    })) as { ok?: boolean } | undefined;
+    if (!resp?.ok) return false;
     await DB.addFavorite({ ...fav, status: "done" });
     return true;
   };
@@ -301,11 +335,15 @@ function FavoritesTab({ favorites, settings, reload, notify }: { favorites: Favo
             <div className="title">{f.artist ? `${f.artist} — ` : ""}{f.title}</div>
             <div className="sub">
               <span className="tag">{f.pool}</span>
+              {(f.meta?.parts ?? []).map((p) => <span key={p} className="tag">{p}</span>)}
+              {(f.meta?.genres ?? []).map((g) => <span key={g} className="tag">{g}</span>)}
+              {(f.meta?.marks ?? []).map((m) => <span key={m} className="tag">{m}</span>)}
               {f.meta?.bpm ? <span className="tag">{f.meta.bpm} BPM</span> : null}
               {f.meta?.key ? <span className="tag">{f.meta.key}</span> : null}
               {f.meta?.rating ? <span className="tag star">★{f.meta.rating}</span> : null}
               {f.status !== "new" && <span className="tag">{f.status}</span>}
             </div>
+            {f.meta?.comment && <div className="comment">{f.meta.comment}</div>}
           </div>
           <button className="icon-btn" title="Удалить" onClick={() => void remove(f)}>✕</button>
         </div>

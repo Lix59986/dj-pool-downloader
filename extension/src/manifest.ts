@@ -7,10 +7,15 @@ export default defineManifest({
   version: "0.1.0",
   permissions: ["downloads", "storage", "tabs", "notifications", "alarms"],
   host_permissions: [
+    "*://*.jesteipool.ru/*",
     "*://jesteipool.ru/*",
     "*://rest.jesteipool.ru/*",
+    "*://*.muzvizor.com/*",
     "*://muzvizor.com/*",
+    "*://*.36pool.com/*",
     "*://36pool.com/*",
+    "*://s3.twcstorage.ru/*",
+    "*://jesteipool.storage.yandexcloud.net/*",
     "*://bpmsupreme.com/*",
     "*://djcity.com/*",
     "*://zipdj.com/*",
@@ -28,9 +33,12 @@ export default defineManifest({
   content_scripts: [
     {
       matches: [
+        "*://*.jesteipool.ru/*",
         "*://jesteipool.ru/*",
         "*://rest.jesteipool.ru/*",
+        "*://*.muzvizor.com/*",
         "*://muzvizor.com/*",
+        "*://*.36pool.com/*",
         "*://36pool.com/*",
         "*://bpmsupreme.com/*",
         "*://djcity.com/*",

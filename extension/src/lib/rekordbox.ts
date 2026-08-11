@@ -1,7 +1,7 @@
 /** Генерация Rekordbox XML и M3U8. */
 
 import type { Track, Part, Settings } from "./types";
-import { ratingToRekordbox } from "./classify";
+import { ratingToRekordbox, buildComment, poolPrefix } from "./classify";
 import { sanitizeName } from "./normalize";
 
 /** Полный абсолютный путь (file://localhost/...) из относительного file_path. */
@@ -27,26 +27,13 @@ function xmlEscape(s: string): string {
     .replace(/'/g, "&apos;");
 }
 
-/** Comments трека: "JP часть ночи: Primetime, Close | JP жанры: House | Маркировки: Русское". */
-export function trackComments(track: Track, poolPrefix: string): string {
-  const parts: string[] = [];
-  if (track.parts.length) parts.push(`${poolPrefix} часть ночи: ${track.parts.join(", ")}`);
-  if (track.genres.length) parts.push(`${poolPrefix} жанры: ${track.genres.join(", ")}`);
-  if (track.marks.length) parts.push(`Маркировки: ${track.marks.join(", ")}`);
-  if (track.pool_type) parts.push(`Тип: ${track.pool_type}`);
-  return parts.join(" | ");
+/** Comments трека: сохранённый в БД comment, либо составленный из классификации. */
+export function trackComments(track: Track, prefix: string): string {
+  if (track.comment) return track.comment;
+  return buildComment(track, prefix);
 }
 
-/** Pool-префикс для комментария. */
-const POOL_PREFIXES: Record<string, string> = {
-  jesteipool: "JP",
-  muzvizor: "MV",
-  "36pool": "36",
-};
-
-export function poolPrefix(pool: string): string {
-  return POOL_PREFIXES[pool] ?? pool.toUpperCase().slice(0, 4);
-}
+export { poolPrefix };
 
 /** Плейлисты: Часть ночи (по языку), Без части ночи, Артист, Жанр. */
 export interface PlaylistDef {

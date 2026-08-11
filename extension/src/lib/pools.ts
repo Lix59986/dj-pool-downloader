@@ -2,7 +2,7 @@
 
 import type { Favorite, Track } from "./types";
 import { normalizeArtist, stripVersionSuffixes } from "./normalize";
-import { detectLang, mapGenres, partsFromLabels, keyToCamelot } from "./classify";
+import { detectLang, mapGenres, partsFromLabels, keyToCamelot, buildComment, poolPrefix } from "./classify";
 
 export interface RawTrack {
   pool: string;
@@ -39,9 +39,24 @@ export interface PoolConnector {
 
 /* ---------- общие хелперы ---------- */
 
+/** Части ночи: строка может содержать несколько меток через пробел ("Opening Primetime"). */
 function partsFrom(raw: string[] | string | null | undefined): string[] {
   if (!raw) return [];
-  return Array.isArray(raw) ? raw : [raw];
+  const list = Array.isArray(raw) ? raw : String(raw).split(/\s+/);
+  return list.map((s) => String(s).trim()).filter(Boolean);
+}
+
+/** Маркировки: объект {title, code} или массив таких объектов (jesteipool marking/event_marking). */
+function marksFrom(raw: unknown): string[] {
+  if (!raw) return [];
+  const list = Array.isArray(raw) ? raw : [raw];
+  return list
+    .map((m) => {
+      if (typeof m === "string") return m;
+      if (m && typeof m === "object" && "title" in m) return String((m as { title?: unknown }).title ?? "");
+      return "";
+    })
+    .filter(Boolean);
 }
 
 function genresFrom(list: { title?: string; name?: string }[] | { name: string } | string | null | undefined): string[] {
@@ -54,6 +69,11 @@ function genresFrom(list: { title?: string; name?: string }[] | { name: string }
 function baseTrack(
   raw: RawTrack,
 ): Omit<Track, "id" | "file_path" | "file_size" | "file_ext" | "downloaded_at" | "updated_at" | "synced"> {
+  const parts = partsFromLabels(raw.parts);
+  const comment = buildComment(
+    { parts, genres: raw.genres, marks: raw.marks, pool_type: raw.pool_type },
+    poolPrefix(raw.pool),
+  );
   return {
     title: raw.title,
     artist: raw.artist,
@@ -61,14 +81,14 @@ function baseTrack(
     bpm: raw.bpm,
     key: raw.key,
     genres: raw.genres,
-    parts: partsFromLabels(raw.parts),
+    parts,
     lang: detectLang(raw.title, raw.artist),
     rating: raw.rating,
     marks: raw.marks,
     pool: raw.pool,
     pool_type: raw.pool_type,
     preview: raw.preview,
-    comment: null,
+    comment: comment || null,
     duration_sec: raw.duration_sec,
     bitrate: null,
     sample_rate: null,
@@ -77,6 +97,11 @@ function baseTrack(
 }
 
 function toFavorite(raw: RawTrack): Omit<Favorite, "id" | "added_at" | "synced"> {
+  const parts = partsFromLabels(raw.parts);
+  const comment = buildComment(
+    { parts, genres: raw.genres, marks: raw.marks, pool_type: raw.pool_type },
+    poolPrefix(raw.pool),
+  );
   return {
     pool: raw.pool,
     track_id_on_pool: raw.track_id_on_pool,
@@ -87,9 +112,10 @@ function toFavorite(raw: RawTrack): Omit<Favorite, "id" | "added_at" | "synced">
       bpm: raw.bpm,
       key: raw.key,
       genres: raw.genres,
-      parts: partsFromLabels(raw.parts),
+      parts,
       rating: raw.rating,
       marks: raw.marks,
+      comment: comment || null,
     },
     status: "new",
     local_path: null,
@@ -107,7 +133,8 @@ type JesteiRaw = {
   genres?: { title?: string; code?: string; sort?: number }[];
   part_night?: string[] | string;
   rating?: number | null;
-  marking?: string[];
+  marking?: unknown;
+  event_marking?: unknown;
   type?: string | null;
   variant?: string | null;
   preview_length?: number;
@@ -141,7 +168,7 @@ const jesteipool: PoolConnector = {
         genres: mapGenres(genresFrom(raw.genres)),
         parts: partsFrom(raw.part_night),
         rating: raw.rating ?? null,
-        marks: raw.marking ?? [],
+        marks: [...marksFrom(raw.marking), ...marksFrom(raw.event_marking)],
         pool_type: poolType,
         preview,
         duration_sec: raw.duration ? Math.round(raw.duration) : null,

@@ -22,6 +22,7 @@ export interface Track {
   rating: number | null; // 1–5
   marks: string[];
   pool: string; // jesteipool | muzvizor | 36pool | ...
+  track_id_on_pool?: string | null; // id трека на пуле (для ссылок и дедупликации)
   pool_type: string | null; // тип версии с пула (Remix, Intro, ...) — в комментарий
   preview: boolean;
   comment: string | null;
@@ -52,6 +53,7 @@ export interface Favorite {
     parts?: Part[];
     rating?: number | null;
     marks?: string[];
+    comment?: string | null;
   } | null;
   status: FavoriteStatus;
   local_path: string | null;
