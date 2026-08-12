@@ -332,6 +332,23 @@ function candidateCards(root: ParentNode): Element[] {
     );
     if (card && card !== root) cards.add(card as Element);
   }
+  // Запасной путь для SPA-пулов (36pool и т.п.): строка трека — кликабельный div
+  // с play-контролем (<img alt="play"/"pause">, НЕ внутри <button> глобального плеера).
+  if (cards.size === 0) {
+    const plays = Array.from(root.querySelectorAll("img[alt='play'], img[alt='pause']")) as HTMLImageElement[];
+    for (const img of plays) {
+      if (img.closest("button")) continue;
+      let el = img.parentElement;
+      while (el && el !== root && el !== document.body) {
+        const st = (el.getAttribute("style") ?? "").toLowerCase();
+        if (st.includes("cursor:pointer") || st.includes("cursor: pointer")) {
+          cards.add(el);
+          break;
+        }
+        el = el.parentElement;
+      }
+    }
+  }
   return Array.from(cards);
 }
 
@@ -383,59 +400,66 @@ function jesteiToken(): string | null {
  *  Возвращает null, если прямого аудио-URL не нашлось или это превью. */
 async function sessionAudioUrl(raw: RawTrack, pool: string): Promise<string | null> {
   if (pool !== "jesteipool") return null;
-  const q = encodeURIComponent(raw.artist || raw.title || "");
-  if (!q) return null;
+  const queries: string[] = [];
+  if (raw.artist) queries.push(raw.artist);
+  if (raw.artist && raw.title) queries.push(`${raw.artist} ${raw.title}`);
+  if (raw.title) queries.push(raw.title);
+  if (!queries.length) return null;
   const token = jesteiToken();
   console.log(`[DJP] ${pool}: токен сессии: ${token ? "есть" : "НЕТ"}`);
   const headers: Record<string, string> = { Accept: "application/json" };
   if (token) headers["Authorization-Token"] = token;
   const bases = ["https://rest.jesteipool.com/api", "https://rest.jesteipool.ru/api"];
   try {
-    let list: Array<{ id?: string; source?: string | null; preview_length?: number | null }> = [];
-    let ok = false;
-    for (const base of bases) {
-      const res = await fetch(`${base}/search/tracks?q=${q}&variant=all&limit=10`, {
-        credentials: "include",
-        headers,
-      });
-      if (!res.ok) {
-        console.log(`[DJP] ${pool}: API search ${base} HTTP ${res.status}`);
+    for (const q of queries) {
+      const eq = encodeURIComponent(q);
+      let list: Array<{ id?: string; source?: string | null; preview_length?: number | null }> = [];
+      let ok = false;
+      for (const base of bases) {
+        const res = await fetch(`${base}/search/tracks?q=${eq}&variant=all&limit=10`, {
+          credentials: "include",
+          headers,
+        });
+        if (!res.ok) {
+          console.log(`[DJP] ${pool}: API search ${base} HTTP ${res.status}`);
+          continue;
+        }
+        list = await res.json();
+        ok = true;
+        break;
+      }
+      if (!ok || !list.length) continue;
+      const target =
+        list.find((t) => String(t.id) === String(raw.track_id_on_pool)) ??
+        list.find((t) => t.source) ??
+        list[0];
+      if (!target?.source) continue;
+      console.log(`[DJP] ${pool}: сессионный source найден (${target.id}) по запросу "${q}"`);
+
+      const playRes = await fetch(target.source, { credentials: "include", redirect: "follow", headers });
+      const finalUrl = playRes.url;
+      const ct = playRes.headers.get("content-type") ?? "";
+      const cl = Number(playRes.headers.get("content-length") ?? "0");
+      playRes.body?.cancel();
+      if (!finalUrl) continue;
+      if (!ct.startsWith("audio/")) {
+        console.log(`[DJP] ${pool}: play вернул не аудио: ${ct}`);
         continue;
       }
-      list = await res.json();
-      ok = true;
-      break;
-    }
-    if (!ok || !list.length) return null;
-    const target =
-      list.find((t) => String(t.id) === String(raw.track_id_on_pool)) ??
-      list.find((t) => t.source) ??
-      list[0];
-    if (!target?.source) return null;
-    console.log(`[DJP] ${pool}: сессионный source найден (${target.id})`);
-
-    const playRes = await fetch(target.source, { credentials: "include", redirect: "follow", headers });
-    const finalUrl = playRes.url;
-    const ct = playRes.headers.get("content-type") ?? "";
-    const cl = Number(playRes.headers.get("content-length") ?? "0");
-    playRes.body?.cancel();
-    if (!finalUrl) return null;
-    if (!ct.startsWith("audio/")) {
-      console.log(`[DJP] ${pool}: play вернул не аудио: ${ct}`);
-      return null;
-    }
-    if (token) {
-      // залогинен: требуем полный файл, превью (~1.4МБ) отсекаем → фоллбэк на клик
-      if (cl > 0 && cl < 3_000_000) {
-        console.log(`[DJP] ${pool}: похоже на превью (${cl} байт) — нужен логин`);
-        return null;
+      if (token) {
+        // залогинен: требуем полный файл, превью (~1.4МБ) отсекаем → фоллбэк на клик
+        if (cl > 0 && cl < 3_000_000) {
+          console.log(`[DJP] ${pool}: похоже на превью (${cl} байт) — нужен логин`);
+          continue;
+        }
+        console.log(`[DJP] ${pool}: полный файл: ${finalUrl} (${cl} байт)`);
+      } else {
+        // без логина отдаём что есть (превью) — попадёт в muzz/_preview
+        console.log(`[DJP] ${pool}: без логина — превью: ${finalUrl} (${cl} байт)`);
       }
-      console.log(`[DJP] ${pool}: полный файл: ${finalUrl} (${cl} байт)`);
-    } else {
-      // без логина отдаём что есть (превью) — попадёт в muzz/_preview
-      console.log(`[DJP] ${pool}: без логина — превью: ${finalUrl} (${cl} байт)`);
+      return finalUrl;
     }
-    return finalUrl;
+    return null;
   } catch (e) {
     console.log("[DJP] sessionAudioUrl error", e);
     return null;

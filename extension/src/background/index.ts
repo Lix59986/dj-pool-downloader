@@ -378,9 +378,13 @@ async function downloadRaw(raw: RawTrackMsg): Promise<{ ok: boolean; needClick?:
     }
   }
 
-  // jesteipool: play URL — только превью; полный файл отдаёт сайт под сессией
-  if (r.pool === "jesteipool" && /^\d+$/.test(r.track_id_on_pool || "")) {
-    return await openTrackAndAutoDownload(`https://jesteipool.ru/track/${r.track_id_on_pool}`, r);
+  // jesteipool: play URL — только превью; полный файл отдаёт сайт под сессией.
+  // Если id корректный — открываем страницу трека; иначе главную (content script найдёт трек по артисту/названию).
+  if (r.pool === "jesteipool") {
+    const pageUrl = /^\d+$/.test(r.track_id_on_pool || "")
+      ? `https://jesteipool.ru/track/${r.track_id_on_pool}`
+      : "https://jesteipool.ru";
+    return await openTrackAndAutoDownload(pageUrl, r);
   }
 
   const looksDownloadable =
