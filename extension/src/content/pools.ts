@@ -317,23 +317,41 @@ function findPageDownloadBtn(): HTMLElement | null {
   return any ?? null;
 }
 
-/** Полный файл пула через сессию пользователя: API (с cookies) → play → CDN-URL.
+/** Токен jesteipool: cookie `token` (как ставит сайт), fallback localStorage/sessionStorage. */
+function jesteiToken(): string | null {
+  const m = document.cookie.match(/(?:^|;\s*)token=([^;]*)/);
+  if (m) return decodeURIComponent(m[1]);
+  return localStorage.getItem("token") ?? sessionStorage.getItem("token");
+}
+
+/** Полный файл пула через сессию пользователя: API (с токеном) → play → CDN-URL.
  *  Возвращает null, если прямого аудио-URL не нашлось или это превью. */
 async function sessionAudioUrl(raw: RawTrack, pool: string): Promise<string | null> {
   if (pool !== "jesteipool") return null;
   const q = encodeURIComponent(raw.artist || raw.title || "");
   if (!q) return null;
+  const token = jesteiToken();
+  console.log(`[DJP] ${pool}: токен сессии: ${token ? "есть" : "НЕТ"}`);
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (token) headers["Authorization-Token"] = token;
+  const bases = ["https://rest.jesteipool.com/api", "https://rest.jesteipool.ru/api"];
   try {
-    const res = await fetch(`https://rest.jesteipool.ru/api/search/tracks?q=${q}&variant=all&limit=10`, {
-      credentials: "include",
-      headers: { Accept: "application/json" },
-    });
-    if (!res.ok) return null;
-    const list = (await res.json()) as Array<{
-      id?: string;
-      source?: string | null;
-      preview_length?: number | null;
-    }>;
+    let list: Array<{ id?: string; source?: string | null; preview_length?: number | null }> = [];
+    let ok = false;
+    for (const base of bases) {
+      const res = await fetch(`${base}/search/tracks?q=${q}&variant=all&limit=10`, {
+        credentials: "include",
+        headers,
+      });
+      if (!res.ok) {
+        console.log(`[DJP] ${pool}: API search ${base} HTTP ${res.status}`);
+        continue;
+      }
+      list = await res.json();
+      ok = true;
+      break;
+    }
+    if (!ok || !list.length) return null;
     const target =
       list.find((t) => String(t.id) === String(raw.track_id_on_pool)) ??
       list.find((t) => t.source) ??
@@ -341,7 +359,7 @@ async function sessionAudioUrl(raw: RawTrack, pool: string): Promise<string | nu
     if (!target?.source) return null;
     console.log(`[DJP] ${pool}: сессионный source найден (${target.id})`);
 
-    const playRes = await fetch(target.source, { credentials: "include", redirect: "follow" });
+    const playRes = await fetch(target.source, { credentials: "include", redirect: "follow", headers });
     const finalUrl = playRes.url;
     const ct = playRes.headers.get("content-type") ?? "";
     const cl = Number(playRes.headers.get("content-length") ?? "0");

@@ -19,6 +19,8 @@ import type { Track, Part, Settings } from "../lib/types";
 const POOL_DOMAINS = [
   "jesteipool.ru",
   "rest.jesteipool.ru",
+  "jesteipool.com",
+  "rest.jesteipool.com",
   "muzvizor.com",
   "36pool.com",
   "twcstorage.ru", // s3 36pool
