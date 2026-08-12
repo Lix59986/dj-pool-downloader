@@ -157,14 +157,32 @@ function findNativeFavoriteBtn(card: Element): Element | null {
 
 /** Поиск «родной» кнопки/ссылки скачивания в карточке (для клика вместо нашего скачивания). */
 function findNativeDownloadBtn(card: Element): HTMLElement | null {
-  const direct = card.querySelector<HTMLElement>(
-    "a[download], a[href*='.mp3'], a[href*='.wav'], a[href*='.flac'], a[href*='.m4a'], a[href*='.aac'], a[href*='.ogg'], a[href*='.opus'], a[href*='download'], button[class*='download'], button[class*='downl'], button[title*='Скачать'], button[title*='Download'], button[aria-label*='download'], button[aria-label*='Скачать']",
-  );
-  if (direct) return direct;
-  // fallback: кликабельный элемент с классом download
-  const any = card.querySelector<HTMLElement>("[class*='download']");
-  if (any && (any.tagName === "A" || any.tagName === "BUTTON")) return any;
-  return null;
+  const isDownloadTrigger = (el: Element): boolean => {
+    if (el.tagName === "INPUT" || el.tagName === "SELECT" || el.tagName === "TEXTAREA") return false;
+    if (el instanceof HTMLAnchorElement) {
+      const href = el.getAttribute("href") ?? "";
+      if (!href) return true;
+      try {
+        const u = new URL(href, location.href);
+        if (u.hostname === location.hostname && (u.pathname.includes("/track/") || u.pathname === location.pathname)) return false;
+      } catch {
+        return false;
+      }
+    }
+    const t = (el.textContent ?? "").trim().toLowerCase();
+    return /скачать|download|загруз|⤓/.test(t) || /(mp3|wav|flac|m4a|aac|ogg|opus)/.test(t);
+  };
+  const sel =
+    "a[download], a[href*='.mp3'], a[href*='.wav'], a[href*='.flac'], a[href*='.m4a'], a[href*='.aac'], a[href*='.ogg'], a[href*='.opus'], a[href*='download'], button[class*='download'], button[class*='downl'], button[title*='Скачать'], button[title*='Download'], button[aria-label*='скачать'], button[aria-label*='download'], button[data-action*='download'], [class*='download'][role='button']";
+  const direct = card.querySelector<HTMLElement>(sel);
+  if (direct && isDownloadTrigger(direct)) {
+    console.log(`[DJP] findNativeDownloadBtn: нашёл по селектору: ${direct.outerHTML.slice(0, 160)}`);
+    return direct;
+  }
+  // текстовый fallback внутри карточки (кнопки/ссылки с фразами «Скачать»/«Download»/↓)
+  const cand = Array.from(card.querySelectorAll<HTMLElement>("a,button,[role='button']")).find((el) => isDownloadTrigger(el));
+  if (cand) console.log(`[DJP] findNativeDownloadBtn: нашёл по тексту: ${cand.outerHTML.slice(0, 160)}`);
+  return cand ?? null;
 }
 
 /** Прямой аудио-URL из карточки: <a href=mp3>, <audio src>, кнопка/ссылка download. */
@@ -369,12 +387,17 @@ async function sessionAudioUrl(raw: RawTrack, pool: string): Promise<string | nu
       console.log(`[DJP] ${pool}: play вернул не аудио: ${ct}`);
       return null;
     }
-    // превью ~1.4МБ; полный файл обычно заметно больше
-    if (cl > 0 && cl < 3_000_000) {
-      console.log(`[DJP] ${pool}: похоже на превью (${cl} байт)`);
-      return null;
+    if (token) {
+      // залогинен: требуем полный файл, превью (~1.4МБ) отсекаем → фоллбэк на клик
+      if (cl > 0 && cl < 3_000_000) {
+        console.log(`[DJP] ${pool}: похоже на превью (${cl} байт) — нужен логин`);
+        return null;
+      }
+      console.log(`[DJP] ${pool}: полный файл: ${finalUrl} (${cl} байт)`);
+    } else {
+      // без логина отдаём что есть (превью) — попадёт в muzz/_preview
+      console.log(`[DJP] ${pool}: без логина — превью: ${finalUrl} (${cl} байт)`);
     }
-    console.log(`[DJP] ${pool}: полный файл: ${finalUrl} (${cl} байт)`);
     return finalUrl;
   } catch (e) {
     console.log("[DJP] sessionAudioUrl error", e);
