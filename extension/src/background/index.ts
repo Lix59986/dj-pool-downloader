@@ -306,12 +306,12 @@ async function addFavorite(raw: RawTrackMsg): Promise<void> {
   });
 }
 
-/** Открыть страницу трека в фоне: content script достаёт полный файл через сессию
- * (API → play → CDN) или кликает штатную кнопку скачивания. */
-async function openTrackAndAutoDownload(pageUrl: string, raw: RawTrackMsg): Promise<{ ok: boolean; needClick?: boolean }> {
-  const tab = await chrome.tabs.create({ url: pageUrl, active: false });
-  const tabId = tab.id!;
-  await new Promise<void>((resolve) => {
+/** Одна переиспользуемая фоновая вкладка jesteipool на все избранные (чтобы не открывать десятки вкладок). */
+let jesteiTabId: number | null = null;
+let jesteiTabCloseTimer: ReturnType<typeof setTimeout> | null = null;
+
+function waitTabComplete(tabId: number): Promise<void> {
+  return new Promise<void>((resolve) => {
     const timer = setTimeout(resolve, 8000);
     const listener = (id: number, info: chrome.tabs.TabChangeInfo) => {
       if (id === tabId && info.status === "complete") {
@@ -322,13 +322,47 @@ async function openTrackAndAutoDownload(pageUrl: string, raw: RawTrackMsg): Prom
     };
     chrome.tabs.onUpdated.addListener(listener);
   });
+}
+
+async function ensureJesteiTab(): Promise<number> {
+  if (jesteiTabId != null) {
+    try {
+      const t = await chrome.tabs.get(jesteiTabId);
+      if (t && !String(t.url ?? "").startsWith("chrome://")) return jesteiTabId;
+    } catch {
+      /* вкладка закрыта */
+    }
+  }
+  const tab = await chrome.tabs.create({ url: "https://jesteipool.ru", active: false });
+  jesteiTabId = tab.id!;
+  await waitTabComplete(jesteiTabId);
+  return jesteiTabId;
+}
+
+function scheduleCloseJesteiTab(): void {
+  if (jesteiTabCloseTimer) clearTimeout(jesteiTabCloseTimer);
+  jesteiTabCloseTimer = setTimeout(() => {
+    if (jesteiTabId != null) {
+      chrome.tabs.remove(jesteiTabId).catch(() => {});
+      jesteiTabId = null;
+    }
+  }, 25000);
+}
+
+/** Открыть страницу трека в фоне: content script достаёт полный файл через сессию
+ * (API → play → CDN) или кликает штатную кнопку скачивания.
+ * Для jesteipool переиспользуется одна общая вкладка на все треки избранного. */
+async function openTrackAndAutoDownload(pageUrl: string, raw: RawTrackMsg): Promise<{ ok: boolean; needClick?: boolean }> {
+  const shared = raw.pool === "jesteipool";
+  const tabId = shared ? await ensureJesteiTab() : (await chrome.tabs.create({ url: pageUrl, active: false })).id!;
+  if (!shared) await waitTabComplete(tabId);
   try {
     const resp = (await chrome.tabs.sendMessage(tabId, {
       type: "AUTO_DOWNLOAD",
       payload: raw,
     })) as { ok?: boolean; url?: string; needClick?: boolean } | undefined;
 
-    // content script нашёл прямой URL полного файла — скачиваем сами и закрываем вкладку
+    // content script нашёл прямой URL полного файла — скачиваем сами
     if (resp?.url) {
       const track = buildTrackFromRaw(raw, resp.url);
       const settings = await getSettings();
@@ -336,15 +370,18 @@ async function openTrackAndAutoDownload(pageUrl: string, raw: RawTrackMsg): Prom
       track.file_path = path;
       await DB.addTrack(track);
       await chrome.downloads.download({ url: resp.url, filename: path });
-      chrome.tabs.remove(tabId);
+      if (shared) scheduleCloseJesteiTab();
+      else chrome.tabs.remove(tabId);
       return { ok: true };
     }
 
-    // клик по штатной кнопке — даём скачиванию стартовать и закрываем вкладку позже
-    setTimeout(() => chrome.tabs.remove(tabId), 15000);
+    // клик по штатной кнопке — даём скачиванию стартовать
+    if (shared) scheduleCloseJesteiTab();
+    else setTimeout(() => chrome.tabs.remove(tabId), 15000);
     return { ok: true, needClick: true };
   } catch {
-    setTimeout(() => chrome.tabs.remove(tabId), 3000);
+    if (shared) scheduleCloseJesteiTab();
+    else setTimeout(() => chrome.tabs.remove(tabId), 3000);
     return { ok: true };
   }
 }

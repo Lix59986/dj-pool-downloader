@@ -288,8 +288,6 @@ function candidateCards(root: ParentNode): Element[] {
     "[class*='song-item']",
     "[class*='result-item']",
     "[class*='search-item']",
-    "[class*='play']",
-    "[class*='actions']",
   ].join(",");
   const found = Array.from(root.querySelectorAll(sel));
   // поднимаемся до карточки (ближайший контейнер)
@@ -327,7 +325,6 @@ function candidateCards(root: ParentNode): Element[] {
         "[role='listitem']",
         "[role='button']",
         "section",
-        "div",
       ].join(","),
     );
     if (card && card !== root) cards.add(card as Element);
