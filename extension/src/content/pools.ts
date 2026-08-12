@@ -202,6 +202,8 @@ function findAudioUrl(card: Element): string | null {
 /** Повесить кнопки рядом с кнопкой избранного пула (или в конец карточки). */
 function attachButtons(card: Element, pool: string): void {
   if (card.querySelector(".djp-host")) return;
+  // уже вставлено в предке этой карточки (несколько якорей в одной карточке)
+  if (card.closest(".djp-host")) return;
   card.classList.add("djp-card");
   const host = document.createElement("span");
   host.className = "djp-host";
@@ -267,6 +269,9 @@ function attachButtons(card: Element, pool: string): void {
   }
 }
 
+/** Служебные маршруты /tracks/*, которые не являются страницами треков. */
+const TRACK_ACTION_ROUTES = ["/tracks/upload", "/tracks/pending", "/tracks/review", "/tracks/all", "/tracks/new"];
+
 /** Общие карточки-кандидаты: элементы с data-title, ссылкой на трек, кнопкой play или текстом "Артист — Название". */
 function candidateCards(root: ParentNode): Element[] {
   const sel = [
@@ -290,8 +295,40 @@ function candidateCards(root: ParentNode): Element[] {
   // поднимаемся до карточки (ближайший контейнер)
   const cards = new Set<Element>();
   for (const el of found) {
+    // отсекаем служебные маршруты (навигация/загрузка), оставляем только страницы треков
+    if (el instanceof HTMLAnchorElement) {
+      const href = el.getAttribute("href") ?? "";
+      if (TRACK_ACTION_ROUTES.some((r) => href === r || href.startsWith(r + "/") || href.startsWith(r + "?"))) continue;
+    }
     const card = el.closest(
-      "[data-card],[data-track-card],li,article,tr,.track,.track-card,.track-item,.song,.song-item,.search-item,.result-item,.playlist-item,.item,.table-row,[class*='row']",
+      [
+        "[data-card]",
+        "[data-track-card]",
+        "li",
+        "article",
+        "tr",
+        ".track",
+        ".track-card",
+        ".track-item",
+        ".song",
+        ".song-item",
+        ".search-item",
+        ".result-item",
+        ".playlist-item",
+        ".item",
+        ".table-row",
+        "[class*='row']",
+        "[class*='card']",
+        "[class*='Card']",
+        "[class*='track']",
+        "[class*='Track']",
+        "[class*='item']",
+        "[class*='Item']",
+        "[role='listitem']",
+        "[role='button']",
+        "section",
+        "div",
+      ].join(","),
     );
     if (card && card !== root) cards.add(card as Element);
   }

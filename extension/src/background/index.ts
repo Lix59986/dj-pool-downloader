@@ -354,14 +354,28 @@ async function downloadRaw(raw: RawTrackMsg): Promise<{ ok: boolean; needClick?:
   const url = r.url;
 
   // 36pool: playback_url — полный MP3, скачиваем напрямую
-  if (r.pool === "36pool" && url && isAudioUrl(url)) {
-    const track = buildTrackFromRaw(r, url);
-    const settings = await getSettings();
-    const path = resolveCollision(buildFilePath(track, settings), await existingPaths());
-    track.file_path = path;
-    await DB.addTrack(track);
-    await chrome.downloads.download({ url, filename: path });
-    return { ok: true };
+  if (r.pool === "36pool") {
+    let audioUrl = url && isAudioUrl(url) ? url : null;
+    if (!audioUrl && r.track_id_on_pool) {
+      try {
+        const tr = await fetch(`https://36pool.com/api/v1/tracks/${encodeURIComponent(r.track_id_on_pool)}`);
+        if (tr.ok) {
+          const j = (await tr.json()) as { playback_url?: string | null };
+          if (j.playback_url && isAudioUrl(j.playback_url)) audioUrl = j.playback_url;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    if (audioUrl) {
+      const track = buildTrackFromRaw(r, audioUrl);
+      const settings = await getSettings();
+      const path = resolveCollision(buildFilePath(track, settings), await existingPaths());
+      track.file_path = path;
+      await DB.addTrack(track);
+      await chrome.downloads.download({ url: audioUrl, filename: path });
+      return { ok: true };
+    }
   }
 
   // jesteipool: play URL — только превью; полный файл отдаёт сайт под сессией
