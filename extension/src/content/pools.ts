@@ -329,21 +329,26 @@ function candidateCards(root: ParentNode): Element[] {
     );
     if (card && card !== root) cards.add(card as Element);
   }
-  // Запасной путь для SPA-пулов (36pool и т.п.): строка трека — кликабельный div
+  // Запасной путь для SPA-пулов (36pool и т.п.): строка трека — кликабельный блок
   // с play-контролем (<img alt="play"/"pause">, НЕ внутри <button> глобального плеера).
+  // 36pool использует CSS-in-JS (emotion): cursor:pointer — в классе, а не в inline style,
+  // поэтому проверяем getComputedStyle, и берём верхний кликабельный контейнер с >1 потомком.
   if (cards.size === 0) {
     const plays = Array.from(root.querySelectorAll("img[alt='play'], img[alt='pause']")) as HTMLImageElement[];
     for (const img of plays) {
       if (img.closest("button")) continue;
       let el = img.parentElement;
+      let lastClickable: Element | null = null;
       while (el && el !== root && el !== document.body) {
-        const st = (el.getAttribute("style") ?? "").toLowerCase();
-        if (st.includes("cursor:pointer") || st.includes("cursor: pointer")) {
+        const clickable = getComputedStyle(el).cursor === "pointer";
+        if (clickable) lastClickable = el;
+        if (clickable && el.children.length > 1) {
           cards.add(el);
           break;
         }
         el = el.parentElement;
       }
+      if (!cards.has(lastClickable as Element) && lastClickable) cards.add(lastClickable);
     }
   }
   return Array.from(cards);
