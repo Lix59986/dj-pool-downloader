@@ -335,15 +335,24 @@ function candidateCards(root: ParentNode): Element[] {
   // cursor:pointer — в классе, поэтому проверяем getComputedStyle и берём верхний
   // кликабельный контейнер с >1 потомком.
   if (cards.size === 0) {
+    // Дёшевые нативные селекторы (без перебора всего DOM):
+    // play-иконка (src), обложка (CDN 36pool / jesteipool, с учётом lazy-load через data-src).
     const markers = Array.from(
-      root.querySelectorAll("img[src*='Play.png'], img[src*='Play Stop.png'], img[src*='s3.twcstorage.ru']"),
+      root.querySelectorAll(
+        "img[src*='Play'], img[src*='play'], img[src*='twcstorage'], img[src*='s3.'], " +
+          "img[data-src*='twcstorage'], img[src*='yandexcloud'], img[data-src*='yandexcloud']",
+      ),
     ) as HTMLImageElement[];
     console.log(`[DJP] маркеров строк (play/обложка): ${markers.length}`);
+    for (const img of markers.slice(0, 8)) {
+      console.log(`[DJP][diag] img src="${String(img.getAttribute("src") ?? img.getAttribute("data-src") ?? "").slice(0, 90)}"`);
+    }
     for (const img of markers) {
-      if (img.closest("button")) continue;
+      if (img.closest("button")) continue; // глобальный плеер
       let el = img.parentElement;
       let lastClickable: Element | null = null;
-      while (el && el !== root && el !== document.body) {
+      let steps = 0;
+      while (el && el !== root && el !== document.body && steps++ < 12) {
         const clickable = getComputedStyle(el).cursor === "pointer";
         if (clickable) lastClickable = el;
         if (clickable && el.children.length > 1) {
@@ -354,20 +363,6 @@ function candidateCards(root: ParentNode): Element[] {
       }
       if (lastClickable && !cards.has(lastClickable)) cards.add(lastClickable);
     }
-  }
-  // Диагностика 36pool: что реально есть в DOM, если карточек не нашли
-  if (cards.size === 0) {
-    const imgs = Array.from(root.querySelectorAll("img"));
-    const srcs = imgs
-      .map((i) => i.getAttribute("src") ?? i.getAttribute("data-src") ?? i.getAttribute("data-original") ?? "")
-      .filter((s) => /play|twcstorage|s3\.|icon|track/i.test(s))
-      .slice(0, 10);
-    console.log(
-      `[DJP][diag] a=${root.querySelectorAll("a").length} img=${imgs.length} ` +
-        `trackA=${root.querySelectorAll("a[href*='/track']").length} ` +
-        `divCursorPtr=${Array.from(root.querySelectorAll("div")).filter((d) => getComputedStyle(d).cursor === "pointer").length} ` +
-        `sample=${JSON.stringify(srcs)}`,
-    );
   }
   return Array.from(cards);
 }
