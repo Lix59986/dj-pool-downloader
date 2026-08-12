@@ -355,6 +355,20 @@ function candidateCards(root: ParentNode): Element[] {
       if (lastClickable && !cards.has(lastClickable)) cards.add(lastClickable);
     }
   }
+  // Диагностика 36pool: что реально есть в DOM, если карточек не нашли
+  if (cards.size === 0) {
+    const imgs = Array.from(root.querySelectorAll("img"));
+    const srcs = imgs
+      .map((i) => i.getAttribute("src") ?? i.getAttribute("data-src") ?? i.getAttribute("data-original") ?? "")
+      .filter((s) => /play|twcstorage|s3\.|icon|track/i.test(s))
+      .slice(0, 10);
+    console.log(
+      `[DJP][diag] a=${root.querySelectorAll("a").length} img=${imgs.length} ` +
+        `trackA=${root.querySelectorAll("a[href*='/track']").length} ` +
+        `divCursorPtr=${Array.from(root.querySelectorAll("div")).filter((d) => getComputedStyle(d).cursor === "pointer").length} ` +
+        `sample=${JSON.stringify(srcs)}`,
+    );
+  }
   return Array.from(cards);
 }
 
