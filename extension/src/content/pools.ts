@@ -288,32 +288,108 @@ function scan(): void {
   for (const card of cards) attachButtons(card, poolConnector.id);
 }
 
-/** Кнопка скачивания на странице трека (клик по ней = загрузка файла сайта). */
+/** Кнопка скачивания на странице трека (клик по ней = загрузка файла сайта).
+ * Точный выбор: ссылки на файл / кнопки «Скачать», без ссылок на текущую страницу. */
 function findPageDownloadBtn(): HTMLElement | null {
-  const direct = document.querySelector<HTMLElement>(
-    "a[download], button[class*='download'], button[class*='downl'], button[title*='Скачать'], button[title*='Download'], button[aria-label*='download'], button[aria-label*='Скачать'], [class*='download'][role='button']",
+  const isAudioTrigger = (el: Element): boolean => {
+    if (el.tagName === "INPUT" || el.tagName === "SELECT" || el.tagName === "TEXTAREA") return false;
+    if (el instanceof HTMLAnchorElement) {
+      const href = el.getAttribute("href") ?? "";
+      if (!href) return false;
+      try {
+        const u = new URL(href, location.href);
+        if (u.hostname === location.hostname && (u.pathname.includes("/track/") || u.pathname === location.pathname)) return false;
+      } catch {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const priority = document.querySelector<HTMLElement>(
+    "a[download], a[href$='.mp3'], a[href$='.wav'], a[href$='.flac'], a[href$='.m4a'], a[href$='.aac'], a[href$='.ogg'], button[title*='Скачать'], button[title*='Download'], button[aria-label*='Скачать'], button[aria-label*='download'], button[class*='download']",
   );
-  if (direct) return direct;
-  const any = document.querySelector<HTMLElement>("[class*='download']");
-  if (any && (any.tagName === "A" || any.tagName === "BUTTON")) return any;
-  return null;
+  if (priority && isAudioTrigger(priority)) return priority;
+
+  const any = Array.from(document.querySelectorAll<HTMLElement>("[class*='download'],[class*='downl']")).find(
+    (el) => isAudioTrigger(el) && (el.tagName === "A" || el.tagName === "BUTTON"),
+  );
+  return any ?? null;
 }
 
-// Автозагрузка по просьбе background (из избранного): кликаем штатную кнопку скачивания страницы.
-chrome.runtime.onMessage.addListener((msg: { type?: string }, _sender, sendResponse) => {
+/** Полный файл пула через сессию пользователя: API (с cookies) → play → CDN-URL.
+ *  Возвращает null, если прямого аудио-URL не нашлось или это превью. */
+async function sessionAudioUrl(raw: RawTrack, pool: string): Promise<string | null> {
+  if (pool !== "jesteipool") return null;
+  const q = encodeURIComponent(raw.artist || raw.title || "");
+  if (!q) return null;
+  try {
+    const res = await fetch(`https://rest.jesteipool.ru/api/search/tracks?q=${q}&variant=all&limit=10`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return null;
+    const list = (await res.json()) as Array<{
+      id?: string;
+      source?: string | null;
+      preview_length?: number | null;
+    }>;
+    const target =
+      list.find((t) => String(t.id) === String(raw.track_id_on_pool)) ??
+      list.find((t) => t.source) ??
+      list[0];
+    if (!target?.source) return null;
+    console.log(`[DJP] ${pool}: сессионный source найден (${target.id})`);
+
+    const playRes = await fetch(target.source, { credentials: "include", redirect: "follow" });
+    const finalUrl = playRes.url;
+    const ct = playRes.headers.get("content-type") ?? "";
+    const cl = Number(playRes.headers.get("content-length") ?? "0");
+    playRes.body?.cancel();
+    if (!finalUrl) return null;
+    if (!ct.startsWith("audio/")) {
+      console.log(`[DJP] ${pool}: play вернул не аудио: ${ct}`);
+      return null;
+    }
+    // превью ~1.4МБ; полный файл обычно заметно больше
+    if (cl > 0 && cl < 3_000_000) {
+      console.log(`[DJP] ${pool}: похоже на превью (${cl} байт)`);
+      return null;
+    }
+    console.log(`[DJP] ${pool}: полный файл: ${finalUrl} (${cl} байт)`);
+    return finalUrl;
+  } catch (e) {
+    console.log("[DJP] sessionAudioUrl error", e);
+    return null;
+  }
+}
+
+// Автозагрузка по просьбе background (из избранного): сначала прямой файл через сессию,
+// затем клик по штатной кнопке скачивания страницы.
+chrome.runtime.onMessage.addListener((msg: { type?: string; payload?: RawTrack }, _sender, sendResponse) => {
   if (msg?.type !== "AUTO_DOWNLOAD") return undefined;
-  const tryClick = async () => {
+  const raw = msg.payload;
+  const pool = poolByDomain(location.hostname)?.id ?? "";
+  void (async () => {
+    if (raw) {
+      const url = await sessionAudioUrl(raw, pool);
+      if (url) {
+        sendResponse({ ok: true, url });
+        return;
+      }
+    }
     for (let i = 0; i < 10; i++) {
       const btn = findPageDownloadBtn();
       if (btn && !(btn instanceof HTMLButtonElement && btn.disabled)) {
+        console.log(`[DJP] AUTO_DOWNLOAD: клик по: ${btn.outerHTML.slice(0, 200)}`);
         btn.click();
-        return true;
+        sendResponse({ ok: true, needClick: true });
+        return;
       }
       await new Promise((r) => setTimeout(r, 500));
     }
-    return false;
-  };
-  void tryClick().then(sendResponse);
+    sendResponse({ ok: false });
+  })();
   return true;
 });
 

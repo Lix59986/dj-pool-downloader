@@ -304,8 +304,9 @@ async function addFavorite(raw: RawTrackMsg): Promise<void> {
   });
 }
 
-/** Открыть страницу трека в фоне и попросить content script кликнуть штатную кнопку скачивания. */
-async function openTrackAndAutoDownload(pageUrl: string): Promise<void> {
+/** Открыть страницу трека в фоне: content script достаёт полный файл через сессию
+ * (API → play → CDN) или кликает штатную кнопку скачивания. */
+async function openTrackAndAutoDownload(pageUrl: string, raw: RawTrackMsg): Promise<{ ok: boolean; needClick?: boolean }> {
   const tab = await chrome.tabs.create({ url: pageUrl, active: false });
   const tabId = tab.id!;
   await new Promise<void>((resolve) => {
@@ -320,9 +321,29 @@ async function openTrackAndAutoDownload(pageUrl: string): Promise<void> {
     chrome.tabs.onUpdated.addListener(listener);
   });
   try {
-    await chrome.tabs.sendMessage(tabId, { type: "AUTO_DOWNLOAD" });
+    const resp = (await chrome.tabs.sendMessage(tabId, {
+      type: "AUTO_DOWNLOAD",
+      payload: raw,
+    })) as { ok?: boolean; url?: string; needClick?: boolean } | undefined;
+
+    // content script нашёл прямой URL полного файла — скачиваем сами и закрываем вкладку
+    if (resp?.url) {
+      const track = buildTrackFromRaw(raw, resp.url);
+      const settings = await getSettings();
+      const path = resolveCollision(buildFilePath(track, settings), await existingPaths());
+      track.file_path = path;
+      await DB.addTrack(track);
+      await chrome.downloads.download({ url: resp.url, filename: path });
+      chrome.tabs.remove(tabId);
+      return { ok: true };
+    }
+
+    // клик по штатной кнопке — даём скачиванию стартовать и закрываем вкладку позже
+    setTimeout(() => chrome.tabs.remove(tabId), 15000);
+    return { ok: true, needClick: true };
   } catch {
-    // content script ещё не встроен или страница не пул — пропускаем
+    setTimeout(() => chrome.tabs.remove(tabId), 3000);
+    return { ok: true };
   }
 }
 
@@ -343,8 +364,7 @@ async function downloadRaw(raw: RawTrackMsg): Promise<{ ok: boolean; needClick?:
 
   // jesteipool: play URL — только превью; полный файл отдаёт сайт под сессией
   if (r.pool === "jesteipool" && /^\d+$/.test(r.track_id_on_pool || "")) {
-    await openTrackAndAutoDownload(`https://jesteipool.ru/track/${r.track_id_on_pool}`);
-    return { ok: true, viaTab: true };
+    return await openTrackAndAutoDownload(`https://jesteipool.ru/track/${r.track_id_on_pool}`, r);
   }
 
   const looksDownloadable =
